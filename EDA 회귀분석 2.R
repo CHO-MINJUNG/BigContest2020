@@ -1,7 +1,26 @@
 library(leaps)
-library(data.table)
 
-teampitcher <- fread('C:/Users/chomjung/OneDrive - 명지대학교/빅콘테스트2020/데이터 전처리/1차_최종_데이터/1차_최종_팀투수.csv', header = TRUE, encoding = 'UTF-8')
-colnames(teampitcher)
+teamhitter <- read.csv('C:/Users/chomjung/OneDrive - 명지대학교/빅콘테스트2020/1차_최종_데이터/1차_최종_최근_팀타자.csv', header = TRUE, encoding = 'UTF-8')
+teamhitter <- teamhitter[,-c(1:4)]
+teamhitter <- teamhitter[,-1]
 
-regfit.full=regsubsets(실점~.,Hitters,nvmax=)
+regfit.full = regsubsets(득점~.,teamhitter, nvmax =43, really.big = T)
+reg.summary = summary(regfit.full)
+
+k<-10
+set.seed(1)
+folds<-sample(1:k,nrow(teamhitter),replace=TRUE)
+cv.errors<-matrix(NA,k,43,dimnames=list(NULL,paste(1:43)))#10x19 NA 생성
+for(j in 1:k){
+  best.fit=regsubsets(득점~.,data=teamhitter[folds!=j,],nvmax=19)
+  for(i in 1:19){
+    test.mat.fold<-model.matrix(득점~.,data=teamhitter[folds==j,])
+    coefi.fold<-coef(best.fit,id=i)
+    pred.fold<-test.mat.fold[,names(coefi.fold)]%*%coefi.fold
+    cv.errors[j,i]<-mean((teamhitter$득점[folds==j]-pred.fold)^2)
+  }
+}
+mean.cv.errors<-apply(cv.errors,2,mean) #각 변수 갯수별 평균값
+mean.cv.errors
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type='b')
